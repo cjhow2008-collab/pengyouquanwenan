@@ -51,12 +51,7 @@ const App: React.FC = () => {
     setUploadedImageDescription('');
 
     try {
-      let result;
-      if (currentModel === 'gemini') {
-        result = await GeminiService.generateMarketingImage();
-      } else {
-        result = await ZhipuService.generateMarketingImage();
-      }
+      const result = await GeminiService.generateMarketingImage();
 
       const { imageUrl, description, theme } = result;
 
@@ -77,7 +72,7 @@ const App: React.FC = () => {
       setErrorMsg(msg);
       setStatus(GenerationStatus.ERROR);
     }
-  }, [currentModel]);
+  }, []);
 
   // Handler: Upload Image - Now includes AI analysis for description
   const handleUploadImage = useCallback(async (file: File, base64: string) => { // Removed description parameter
@@ -90,12 +85,7 @@ const App: React.FC = () => {
 
     try {
       // AI analyzes the image to get a description
-      let aiDescription;
-      if (currentModel === 'gemini') {
-        aiDescription = await GeminiService.analyzeImageForDescription(base64);
-      } else {
-        aiDescription = await ZhipuService.analyzeImageForDescription(base64);
-      }
+      const aiDescription = await GeminiService.analyzeImageForDescription(base64);
 
       setUploadedImageDescription(aiDescription);
       setStatus(GenerationStatus.IMAGE_READY); // Image ready after description is generated
@@ -111,7 +101,7 @@ const App: React.FC = () => {
       setUploadedImageBase64(null);
       setUploadedImageDescription(''); // Clear AI description on error
     }
-  }, [currentModel]);
+  }, []);
 
   // Removed handleUpdateUploadedImageDescription as user no longer manually describes.
 
@@ -160,20 +150,11 @@ const App: React.FC = () => {
       const randomIndex = Math.floor(Math.random() * SELLING_POINTS.length);
       const sellingPoint = SELLING_POINTS[randomIndex].content;
 
-      let paragraphs;
-      if (currentModel === 'gemini') {
-        paragraphs = await GeminiService.generateMarketingText(
-          imageToUse,
-          sellingPoint,
-          descriptionToUse
-        );
-      } else {
-        paragraphs = await ZhipuService.generateMarketingText(
-          imageToUse,
-          sellingPoint,
-          descriptionToUse
-        );
-      }
+      const paragraphs = await GeminiService.generateMarketingText(
+        imageToUse,
+        sellingPoint,
+        descriptionToUse
+      );
 
       // Create complete content object
       const newContent: GeneratedContent = {
@@ -200,7 +181,7 @@ const App: React.FC = () => {
       setErrorMsg(msg);
       setStatus(GenerationStatus.IMAGE_READY); // Revert to image ready so user can try text again
     }
-  }, [currentContent, uploadedImageBase64, uploadedImageDescription, uploadedImageUrl, currentModel]);
+  }, [currentContent, uploadedImageBase64, uploadedImageDescription, uploadedImageUrl]);
 
   // Handler: Restore from history
   const handleSelectHistory = useCallback((item: GeneratedContent) => {
@@ -236,22 +217,7 @@ const App: React.FC = () => {
               </div>
               <p className="text-gray-500">一键生成高深度教育理念插画（如冰山理论、成长阶梯等）与高转化文案，或根据您的图片<span className="font-semibold text-blue-600">自动分析并</span>生成文案。</p>
             </div>
-
-            {/* Model Switcher */}
-            <div className="flex bg-gray-100 p-1 rounded-lg self-start md:self-center">
-              <button
-                onClick={() => setCurrentModel('gemini')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${currentModel === 'gemini' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Google Gemini
-              </button>
-              <button
-                onClick={() => setCurrentModel('zhipu')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${currentModel === 'zhipu' ? 'bg-white shadow text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                智谱 AI (GLM)
-              </button>
-            </div>
+            {/* Model Switcher Removed */}
           </div>
         </header>
 
@@ -267,9 +233,6 @@ const App: React.FC = () => {
           <section className="flex flex-col gap-4">
             <h2 className="text-lg font-semibold text-gray-700 flex justify-between items-center">
               <span>1. 提供视觉素材</span>
-              <span className="text-xs font-normal px-2 py-1 rounded bg-gray-100 text-gray-500">
-                当前模型: {currentModel === 'gemini' ? 'Gemini Flash' : 'Zhipu CogView-3'}
-              </span>
             </h2>
             <ImageDisplay
               imageUrl={currentContent.imageUrl || null} // AI generated image
@@ -296,9 +259,6 @@ const App: React.FC = () => {
           <section className="flex flex-col gap-4">
             <h2 className="text-lg font-semibold text-gray-700 flex justify-between items-center">
               <span>2. 生成营销文案</span>
-              <span className="text-xs font-normal px-2 py-1 rounded bg-gray-100 text-gray-500">
-                当前模型: {currentModel === 'gemini' ? 'Gemini Flash' : 'Zhipu GLM-4'}
-              </span>
             </h2>
             <TextDisplay
               text={currentContent.text || []}
