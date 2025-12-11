@@ -1,7 +1,17 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { MARKETING_THEMES, TEXT_SYSTEM_INSTRUCTION, ART_STYLES, BACKGROUND_SETTINGS, MarketingTheme } from "../constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Helper to get the AI client, initializing it lazily.
+ * This prevents app crash if API key is missing.
+ */
+const getAIClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("Google Gemini API Key is missing. Please configure it in settings or use Zhipu AI.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 /**
  * Helper to retry an async operation with exponential backoff
@@ -14,7 +24,7 @@ async function retryOperation<T>(operation: () => Promise<T>, maxRetries: number
     } catch (error: any) {
       console.warn(`Attempt ${i + 1} failed:`, error);
       lastError = error;
-      
+
       if (i < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, delayMs * Math.pow(2, i)));
       }
@@ -28,6 +38,8 @@ async function retryOperation<T>(operation: () => Promise<T>, maxRetries: number
  */
 export const generateMarketingImage = async (): Promise<{ imageUrl: string; description: string; theme: string }> => {
   return retryOperation(async () => {
+    const ai = getAIClient();
+
     // 1. Randomly select a theme/concept (The "What")
     const randomThemeIndex = Math.floor(Math.random() * MARKETING_THEMES.length);
     const selectedTheme = MARKETING_THEMES[randomThemeIndex];
@@ -75,7 +87,7 @@ export const generateMarketingImage = async (): Promise<{ imageUrl: string; desc
     });
 
     let imageUrl = '';
-    
+
     if (response.candidates && response.candidates[0].content.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
@@ -95,8 +107,8 @@ export const generateMarketingImage = async (): Promise<{ imageUrl: string; desc
       throw new Error("No image data received from API. The model may have refused the prompt.");
     }
 
-    return { 
-      imageUrl, 
+    return {
+      imageUrl,
       description: selectedTheme.descriptionForTextAI,
       theme: selectedTheme.label
     };
@@ -108,6 +120,7 @@ export const generateMarketingImage = async (): Promise<{ imageUrl: string; desc
  */
 export const analyzeImageForDescription = async (base64Image: string): Promise<string> => {
   return retryOperation(async () => {
+    const ai = getAIClient();
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
 
     const prompt = `Describe this image concisely and neutrally, focusing on key objects, themes, and educational metaphors if present. Limit the description to a maximum of 50 Chinese characters.`;
@@ -149,6 +162,7 @@ export const generateMarketingText = async (
   imageDescription: string // Now this will be an AI-generated description for uploaded images
 ): Promise<string[]> => {
   return retryOperation(async () => {
+    const ai = getAIClient();
     // Remove data:image/png;base64, prefix if present for the API call
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
 
