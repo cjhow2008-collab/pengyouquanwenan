@@ -21,6 +21,28 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
+    // Mock Vercel Serverless Function for Local Dev
+    configureServer: (server) => {
+      server.middlewares.use('/api/zhipu-token', async (req, res, next) => {
+        try {
+          const { SignJWT } = await import('jose');
+          const apiKey = env.VITE_ZHIPU_API_KEY || "3984c146532248ceb77fd47a463dcebb.p2yNjD865mg0a3E8";
+          const [id, secret] = apiKey.split('.');
+          const secretKey = new TextEncoder().encode(secret);
+          const token = await new SignJWT({ api_key: id, timestamp: Date.now() })
+            .setProtectedHeader({ alg: 'HS256', sign_type: 'SIGN' })
+            .setExpirationTime('5m')
+            .sign(secretKey);
+
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ token }));
+        } catch (e) {
+          console.error("Local Token Gen Error:", e);
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: "Local Token Gen Failed" }));
+        }
+      });
+    },
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
