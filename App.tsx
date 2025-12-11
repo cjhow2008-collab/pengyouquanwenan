@@ -51,7 +51,8 @@ const App: React.FC = () => {
     setUploadedImageDescription('');
 
     try {
-      const result = await GeminiService.generateMarketingImage();
+      // Use Zhipu for Image Generation
+      const result = await ZhipuService.generateMarketingImage();
 
       const { imageUrl, description, theme } = result;
 
@@ -84,8 +85,8 @@ const App: React.FC = () => {
     setUploadedImageDescription(''); // Clear previous description immediately
 
     try {
-      // AI analyzes the image to get a description
-      const aiDescription = await GeminiService.analyzeImageForDescription(base64);
+      // Use Zhipu for Image Analysis (Vision)
+      const aiDescription = await ZhipuService.analyzeImageForDescription(base64);
 
       setUploadedImageDescription(aiDescription);
       setStatus(GenerationStatus.IMAGE_READY); // Image ready after description is generated
@@ -150,7 +151,8 @@ const App: React.FC = () => {
       const randomIndex = Math.floor(Math.random() * SELLING_POINTS.length);
       const sellingPoint = SELLING_POINTS[randomIndex].content;
 
-      const paragraphs = await GeminiService.generateMarketingText(
+      // Use Zhipu for Text Generation
+      const paragraphs = await ZhipuService.generateMarketingText(
         imageToUse,
         sellingPoint,
         descriptionToUse
@@ -217,7 +219,6 @@ const App: React.FC = () => {
               </div>
               <p className="text-gray-500">一键生成高深度教育理念插画（如冰山理论、成长阶梯等）与高转化文案，或根据您的图片<span className="font-semibold text-blue-600">自动分析并</span>生成文案。</p>
             </div>
-            {/* Model Switcher Removed */}
           </div>
         </header>
 
@@ -233,6 +234,9 @@ const App: React.FC = () => {
           <section className="flex flex-col gap-4">
             <h2 className="text-lg font-semibold text-gray-700 flex justify-between items-center">
               <span>1. 提供视觉素材</span>
+              <span className="text-xs font-normal px-2 py-1 rounded bg-gray-100 text-gray-500">
+                当前模型: Zhipu CogView-3
+              </span>
             </h2>
             <ImageDisplay
               imageUrl={currentContent.imageUrl || null} // AI generated image
@@ -259,6 +263,9 @@ const App: React.FC = () => {
           <section className="flex flex-col gap-4">
             <h2 className="text-lg font-semibold text-gray-700 flex justify-between items-center">
               <span>2. 生成营销文案</span>
+              <span className="text-xs font-normal px-2 py-1 rounded bg-gray-100 text-gray-500">
+                当前模型: Zhipu GLM-4
+              </span>
             </h2>
             <TextDisplay
               text={currentContent.text || []}
