@@ -1,24 +1,17 @@
-import { SignJWT } from 'jose';
-import { MARKETING_THEMES, TEXT_SYSTEM_INSTRUCTION, ART_STYLES, BACKGROUND_SETTINGS } from "../constants";
-
-const API_KEY = import.meta.env.VITE_ZHIPU_API_KEY || (typeof process !== 'undefined' ? process.env.VITE_ZHIPU_API_KEY : '') || '';
-
-// --- JWT Helper ---
+import { MARKETING_THEMES, ART_STYLES, BACKGROUND_SETTINGS } from "../constants";
+// Fetch token from our own secure backend (Vercel Serverless Function)
 const generateToken = async (): Promise<string> => {
-    if (!API_KEY) {
-        console.error("VITE_ZHIPU_API_KEY is missing. Env:", import.meta.env);
-        throw new Error("Missing VITE_ZHIPU_API_KEY. If you are on Vercel, please check your Environment Variables in Settings and then REDEPLOY.");
+    try {
+        const response = await fetch('/api/zhipu-token');
+        if (!response.ok) {
+            throw new Error(`Token API failed: ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data.token;
+    } catch (err) {
+        console.error("Failed to get token from backend:", err);
+        throw new Error("Unable to retrieve AI access token. Please ensure the backend is running.");
     }
-    const parts = API_KEY.split('.');
-    if (parts.length !== 2) throw new Error("Invalid Zhipu API Key format");
-
-    const [id, secret] = parts;
-
-    const secretKey = new TextEncoder().encode(secret);
-    return new SignJWT({ api_key: id, timestamp: Date.now() })
-        .setProtectedHeader({ alg: 'HS256', sign_type: 'SIGN' })
-        .setExpirationTime('5m') // Short expiration is fine for per-request
-        .sign(secretKey);
 };
 
 // --- Retry Helper ---
