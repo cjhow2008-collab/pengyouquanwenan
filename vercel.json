@@ -3,10 +3,6 @@
         {
             "source": "/zhipu-api/:path*",
             "destination": "https://open.bigmodel.cn/api/:path*"
-        },
-        {
-            "source": "/(.*)",
-            "destination": "/index.html"
         }
     ]
 }
