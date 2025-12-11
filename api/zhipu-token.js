@@ -10,7 +10,7 @@ export default async function handler(request, response) {
     // Note: It is recommended to only use Environment Variables in production.
     if (!apiKey) {
         console.warn("Using hardcoded fallback key. Please configure VITE_ZHIPU_API_KEY in Vercel.");
-        apiKey = "3984c146532248ceb77fd47a463dcebb.p2yNjD865mg0a3E8";
+        apiKey = "66321099747d436885cb4c73732c4b70.peCjC0n85E9IucU9";
     }
 
     if (!apiKey) {

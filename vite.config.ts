@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
       server.middlewares.use('/api/zhipu-token', async (req, res, next) => {
         try {
           const { SignJWT } = await import('jose');
-          const apiKey = env.VITE_ZHIPU_API_KEY || "3984c146532248ceb77fd47a463dcebb.p2yNjD865mg0a3E8";
+          const apiKey = env.VITE_ZHIPU_API_KEY || "66321099747d436885cb4c73732c4b70.peCjC0n85E9IucU9";
           const [id, secret] = apiKey.split('.');
           const secretKey = new TextEncoder().encode(secret);
           const token = await new SignJWT({ api_key: id, timestamp: Date.now() })
