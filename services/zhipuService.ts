@@ -67,7 +67,7 @@ export const generateMarketingImage = async (): Promise<{ imageUrl: string; desc
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'cogview-3-plus', // Using the latest plus model
+                model: 'cogview-3', // Switched to commercial standard model
                 prompt: prompt,
                 size: '1024x1024'
             })
@@ -178,7 +178,7 @@ export const generateMarketingText = async (
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "glm-4-plus",
+                model: "glm-4", // Switched from glm-4-plus to glm-4 for better availability/cost balance
                 messages: [{ role: "user", content: prompt }],
                 max_tokens: 800,
                 temperature: 0.7,
