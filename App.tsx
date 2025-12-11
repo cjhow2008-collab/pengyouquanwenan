@@ -2,17 +2,22 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ImageDisplay from './components/ImageDisplay';
 import TextDisplay from './components/TextDisplay';
 import HistorySidebar from './components/HistorySidebar';
-import { generateMarketingImage, generateMarketingText, analyzeImageForDescription } from './services/geminiService';
+import * as GeminiService from './services/geminiService';
+import * as ZhipuService from './services/zhipuService';
 import { SELLING_POINTS } from './constants';
 import { GeneratedContent, GenerationStatus } from './types';
+
+type AIModel = 'gemini' | 'zhipu';
 
 const App: React.FC = () => {
   // Application State
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
   const [currentContent, setCurrentContent] = useState<Partial<GeneratedContent>>({});
-  const [history, setHistory] = useState<GeneratedContent[]>([]
-  );
+  const [history, setHistory] = useState<GeneratedContent[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Model Selection State
+  const [currentModel, setCurrentModel] = useState<AIModel>('gemini');
 
   // New states for uploaded image
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -46,8 +51,15 @@ const App: React.FC = () => {
     setUploadedImageDescription('');
 
     try {
-      const { imageUrl, description, theme } = await generateMarketingImage();
-      
+      let result;
+      if (currentModel === 'gemini') {
+        result = await GeminiService.generateMarketingImage();
+      } else {
+        result = await ZhipuService.generateMarketingImage();
+      }
+
+      const { imageUrl, description, theme } = result;
+
       setCurrentContent({
         imageUrl,
         imageDescription: description,
@@ -65,7 +77,7 @@ const App: React.FC = () => {
       setErrorMsg(msg);
       setStatus(GenerationStatus.ERROR);
     }
-  }, []);
+  }, [currentModel]);
 
   // Handler: Upload Image - Now includes AI analysis for description
   const handleUploadImage = useCallback(async (file: File, base64: string) => { // Removed description parameter
@@ -78,7 +90,13 @@ const App: React.FC = () => {
 
     try {
       // AI analyzes the image to get a description
-      const aiDescription = await analyzeImageForDescription(base64);
+      let aiDescription;
+      if (currentModel === 'gemini') {
+        aiDescription = await GeminiService.analyzeImageForDescription(base64);
+      } else {
+        aiDescription = await ZhipuService.analyzeImageForDescription(base64);
+      }
+
       setUploadedImageDescription(aiDescription);
       setStatus(GenerationStatus.IMAGE_READY); // Image ready after description is generated
     } catch (error: any) {
@@ -93,7 +111,7 @@ const App: React.FC = () => {
       setUploadedImageBase64(null);
       setUploadedImageDescription(''); // Clear AI description on error
     }
-  }, []);
+  }, [currentModel]);
 
   // Removed handleUpdateUploadedImageDescription as user no longer manually describes.
 
@@ -116,16 +134,16 @@ const App: React.FC = () => {
 
     // Prioritize uploaded image if available and analyzed
     if (uploadedImageBase64 && uploadedImageDescription) {
-        imageToUse = uploadedImageBase64;
-        descriptionToUse = uploadedImageDescription;
-        isImageUploaded = true;
+      imageToUse = uploadedImageBase64;
+      descriptionToUse = uploadedImageDescription;
+      isImageUploaded = true;
     } else if (currentContent.imageUrl && currentContent.imageDescription) { // Fallback to AI-generated image
-        imageToUse = currentContent.imageUrl;
-        descriptionToUse = currentContent.imageDescription;
-        isImageUploaded = false;
+      imageToUse = currentContent.imageUrl;
+      descriptionToUse = currentContent.imageDescription;
+      isImageUploaded = false;
     } else {
-        setErrorMsg("请先生成或上传图片，并提供图片描述。");
-        return;
+      setErrorMsg("请先生成或上传图片，并提供图片描述。");
+      return;
     }
 
     // This check is still necessary in case AI analysis failed or returned empty
@@ -142,11 +160,20 @@ const App: React.FC = () => {
       const randomIndex = Math.floor(Math.random() * SELLING_POINTS.length);
       const sellingPoint = SELLING_POINTS[randomIndex].content;
 
-      const paragraphs = await generateMarketingText(
-        imageToUse,
-        sellingPoint,
-        descriptionToUse // Use AI-generated or AI-theme description
-      );
+      let paragraphs;
+      if (currentModel === 'gemini') {
+        paragraphs = await GeminiService.generateMarketingText(
+          imageToUse,
+          sellingPoint,
+          descriptionToUse
+        );
+      } else {
+        paragraphs = await ZhipuService.generateMarketingText(
+          imageToUse,
+          sellingPoint,
+          descriptionToUse
+        );
+      }
 
       // Create complete content object
       const newContent: GeneratedContent = {
@@ -173,7 +200,7 @@ const App: React.FC = () => {
       setErrorMsg(msg);
       setStatus(GenerationStatus.IMAGE_READY); // Revert to image ready so user can try text again
     }
-  }, [currentContent, uploadedImageBase64, uploadedImageDescription, uploadedImageUrl]);
+  }, [currentContent, uploadedImageBase64, uploadedImageDescription, uploadedImageUrl, currentModel]);
 
   // Handler: Restore from history
   const handleSelectHistory = useCallback((item: GeneratedContent) => {
@@ -199,13 +226,33 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 p-4 md:p-8 overflow-y-auto">
         <header className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-yellow-900 font-bold text-xl">
-              51
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-yellow-900 font-bold text-xl">
+                  51
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800">51Talk 朋友圈营销素材生成器</h1>
+              </div>
+              <p className="text-gray-500">一键生成高深度教育理念插画（如冰山理论、成长阶梯等）与高转化文案，或根据您的图片<span className="font-semibold text-blue-600">自动分析并</span>生成文案。</p>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">51Talk 朋友圈营销素材生成器</h1>
+
+            {/* Model Switcher */}
+            <div className="flex bg-gray-100 p-1 rounded-lg self-start md:self-center">
+              <button
+                onClick={() => setCurrentModel('gemini')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${currentModel === 'gemini' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Google Gemini
+              </button>
+              <button
+                onClick={() => setCurrentModel('zhipu')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${currentModel === 'zhipu' ? 'bg-white shadow text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                智谱 AI (GLM)
+              </button>
+            </div>
           </div>
-          <p className="text-gray-500">一键生成高深度教育理念插画（如冰山理论、成长阶梯等）与高转化文案，或根据您的图片<span className="font-semibold text-blue-600">自动分析并</span>生成文案。</p>
         </header>
 
         {errorMsg && (
@@ -218,31 +265,41 @@ const App: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
           {/* Left: Image Section */}
           <section className="flex flex-col gap-4">
-            <h2 className="text-lg font-semibold text-gray-700">1. 提供视觉素材</h2>
-            <ImageDisplay 
+            <h2 className="text-lg font-semibold text-gray-700 flex justify-between items-center">
+              <span>1. 提供视觉素材</span>
+              <span className="text-xs font-normal px-2 py-1 rounded bg-gray-100 text-gray-500">
+                当前模型: {currentModel === 'gemini' ? 'Gemini Flash' : 'Zhipu CogView-3'}
+              </span>
+            </h2>
+            <ImageDisplay
               imageUrl={currentContent.imageUrl || null} // AI generated image
               uploadedImageUrl={uploadedImageUrl} // User uploaded image
-              status={status} 
-              onGenerateAIImage={handleGenerateAIImage} 
+              status={status}
+              onGenerateAIImage={handleGenerateAIImage}
               onUploadImage={handleUploadImage}
               uploadedImageDescription={uploadedImageDescription}
               onClearUploadedImage={handleClearUploadedImage}
             />
             {(displayImageUrl && infoBoxImageDescription) && (
-               <div className="bg-indigo-50 border border-indigo-100 rounded-md p-3">
-                 <p className="text-sm font-bold text-indigo-800 mb-1">
-                   🎨 创意主题: {infoBoxTheme}
-                 </p>
-                 <p className="text-xs text-indigo-600">
-                   {infoBoxImageDescription.slice(0, 100)}...
-                 </p>
-               </div>
+              <div className="bg-indigo-50 border border-indigo-100 rounded-md p-3">
+                <p className="text-sm font-bold text-indigo-800 mb-1">
+                  🎨 创意主题: {infoBoxTheme}
+                </p>
+                <p className="text-xs text-indigo-600">
+                  {infoBoxImageDescription.slice(0, 100)}...
+                </p>
+              </div>
             )}
           </section>
 
           {/* Right: Text Section */}
           <section className="flex flex-col gap-4">
-            <h2 className="text-lg font-semibold text-gray-700">2. 生成营销文案</h2>
+            <h2 className="text-lg font-semibold text-gray-700 flex justify-between items-center">
+              <span>2. 生成营销文案</span>
+              <span className="text-xs font-normal px-2 py-1 rounded bg-gray-100 text-gray-500">
+                当前模型: {currentModel === 'gemini' ? 'Gemini Flash' : 'Zhipu GLM-4'}
+              </span>
+            </h2>
             <TextDisplay
               text={currentContent.text || []}
               status={status}
@@ -260,10 +317,10 @@ const App: React.FC = () => {
       </div>
 
       {/* Sidebar Area */}
-      <HistorySidebar 
-        history={history} 
-        onSelect={handleSelectHistory} 
-        selectedId={currentContent.id || null} 
+      <HistorySidebar
+        history={history}
+        onSelect={handleSelectHistory}
+        selectedId={currentContent.id || null}
       />
     </div>
   );
